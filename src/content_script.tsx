@@ -10,6 +10,20 @@ document.body.appendChild(portal);
 const root = createRoot(portal);
 root.render(<App />);
 
+function isScrollable(element: HTMLElement) {
+    // Check both vertical and horizontal overflow properties
+    const style = window.getComputedStyle(element);
+    const isOverflowScrollY = style.overflowY === 'auto' || style.overflowY === 'scroll';
+    const isOverflowScrollX = style.overflowX === 'auto' || style.overflowX === 'scroll';
+
+    // For the root scrollable element (window/document/body)
+    const hasScrollableSpaceY = element.scrollHeight > element.clientHeight;
+    const hasScrollableSpaceX = element.scrollWidth > element.clientWidth;
+
+    return (isOverflowScrollY && hasScrollableSpaceY) || (isOverflowScrollX && hasScrollableSpaceX);
+  }
+
+
 function App() {
     const [target, setTarget] = React.useState<React.ReactPortal[]>([]);
 
@@ -39,8 +53,19 @@ function App() {
             commonAncestorContainer,
             commonAncestorContainerParent,
         );
+        let commonAncestorScrollableParent =
+            commonAncestorContainer.parentElement;
+        while (
+            commonAncestorScrollableParent &&
+            !isScrollable(commonAncestorScrollableParent) &&
+            commonAncestorScrollableParent.parentElement
+        ) {
+            commonAncestorScrollableParent =
+                commonAncestorScrollableParent?.parentElement;
+        }
+        console.log('most recent scrollable parent', commonAncestorScrollableParent)
         if (commonAncestorContainerParent) {
-            const target = commonAncestorContainerParent.cloneNode(true);
+            const target = commonAncestorContainer.cloneNode(true);
             const targetContainer = document.createElement('div');
             targetContainer.appendChild(target);
             targetContainer.style.position = 'sticky';
@@ -50,9 +75,10 @@ function App() {
             targetContainer.style.padding = '10px';
             targetContainer.style.borderRadius = '10px';
             targetContainer.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
-            commonAncestorContainerParent.parentElement?.insertBefore(
+            // TODO: 需要检查父节点是不是真正撑开滚动容器的那个子节点，如果插入错误的子节点，会被后面的子节点推走了
+            commonAncestorContainer.parentElement?.insertBefore(
                 targetContainer,
-                commonAncestorContainerParent,
+                commonAncestorContainer.nextSibling,
             );
         }
 
